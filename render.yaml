@@ -1,0 +1,8 @@
+
+services:
+  - type: web
+    name: nowpayments-ipn
+    env: python
+    plan: free
+    buildCommand: ""
+    startCommand: "python ipn_server.py"
