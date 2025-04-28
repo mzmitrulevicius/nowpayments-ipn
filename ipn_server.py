@@ -1,9 +1,9 @@
-
 from flask import Flask, request
 import hmac
 import hashlib
 import sqlite3
 import json
+import os
 
 app = Flask(__name__)
 DB = "users.db"
@@ -18,14 +18,21 @@ def verify_ipn(req):
     return hmac.compare_digest(calculated_hmac, received_hmac)
 
 def credit_user(order_id, amount):
-    user_id = int(order_id.split("-")[1]) if "-" in order_id else None
-    if not user_id:
+    if not order_id or "-" not in order_id:
+        print("⚠️ Invalid order_id format:", order_id)
         return
+    try:
+        user_id = int(order_id.split("-")[1])
+    except ValueError:
+        print("⚠️ Cannot extract user_id from order_id:", order_id)
+        return
+
     conn = sqlite3.connect(DB)
     c = conn.cursor()
-    c.execute("UPDATE users SET deposit = deposit + ? WHERE id = ?", (amount, user_id))
+    c.execute("UPDATE users SET balance = balance + ? WHERE id = ?", (amount, user_id))
     conn.commit()
     conn.close()
+    print(f"✅ Credited {amount} USDT to user ID {user_id}")
 
 @app.route("/ipn", methods=["POST"])
 def ipn_handler():
@@ -43,4 +50,5 @@ def ipn_handler():
     return "OK", 200
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    port = int(os.environ.get("PORT", 10000))  # naudoti PORT iš aplinkos
+    app.run(host="0.0.0.0", port=port)
